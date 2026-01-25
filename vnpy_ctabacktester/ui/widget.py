@@ -576,6 +576,8 @@ class StatisticsMonitor(QtWidgets.QTableWidget):
         "end_balance": _("结束资金"),
 
         "total_return": _("总收益率"),
+        "benchmark_return": _("基准收益率"),
+        "excess_return": _("超额收益率"),
         "annual_return": _("年化收益"),
         "max_drawdown": _("最大回撤"),
         "max_ddpercent": _("百分比最大回撤"),
@@ -635,6 +637,8 @@ class StatisticsMonitor(QtWidgets.QTableWidget):
         data["capital"] = f"{data['capital']:,.2f}"
         data["end_balance"] = f"{data['end_balance']:,.2f}"
         data["total_return"] = f"{data['total_return']:,.2f}%"
+        data["benchmark_return"] = f"{data['benchmark_return']:,.2f}%"
+        data["excess_return"] = f"{data['excess_return']:,.2f}%"
         data["annual_return"] = f"{data['annual_return']:,.2f}%"
         data["max_drawdown"] = f"{data['max_drawdown']:,.2f}"
         data["max_ddpercent"] = f"{data['max_ddpercent']:,.2f}%"
