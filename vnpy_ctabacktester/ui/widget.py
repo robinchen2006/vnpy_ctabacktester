@@ -98,11 +98,13 @@ class BacktesterManager(QtWidgets.QWidget):
             QtCore.QDate.currentDate()
         )
 
-        self.rate_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("0.000025")
+        self.rate_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("0.0001")
         self.slippage_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("0.2")
         self.size_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("300")
         self.pricetick_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("0.2")
         self.capital_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("1000000")
+        self.min_commission_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("5")
+        self.stamp_duty_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("0.0005")
 
         backtesting_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("开始回测"))
         backtesting_button.clicked.connect(self.start_backtesting)
@@ -159,7 +161,9 @@ class BacktesterManager(QtWidgets.QWidget):
         form.addRow(_("K线周期"), self.interval_combo)
         form.addRow(_("开始日期"), self.start_date_edit)
         form.addRow(_("结束日期"), self.end_date_edit)
-        form.addRow(_("手续费率"), self.rate_line)
+        form.addRow(_("佣金费率"), self.rate_line)
+        form.addRow(_("最低佣金"), self.min_commission_line)
+        form.addRow(_("印花税率"), self.stamp_duty_line)
         form.addRow(_("交易滑点"), self.slippage_line)
         form.addRow(_("合约乘数"), self.size_line)
         form.addRow(_("价格跳动"), self.pricetick_line)
@@ -264,6 +268,8 @@ class BacktesterManager(QtWidgets.QWidget):
         self.size_line.setText(str(setting["size"]))
         self.pricetick_line.setText(str(setting["pricetick"]))
         self.capital_line.setText(str(setting["capital"]))
+        self.min_commission_line.setText(str(setting.get("min_commission", 0)))
+        self.stamp_duty_line.setText(str(setting.get("stamp_duty", 0)))
 
     def register_event(self) -> None:
         """"""
@@ -328,6 +334,8 @@ class BacktesterManager(QtWidgets.QWidget):
         size: float = float(self.size_line.text())
         pricetick: float = float(self.pricetick_line.text())
         capital: float = float(self.capital_line.text())
+        min_commission: float = float(self.min_commission_line.text())
+        stamp_duty: float = float(self.stamp_duty_line.text())
 
         # Check validity of vt_symbol
         if "." not in vt_symbol:
@@ -349,7 +357,9 @@ class BacktesterManager(QtWidgets.QWidget):
             "slippage": slippage,
             "size": size,
             "pricetick": pricetick,
-            "capital": capital
+            "capital": capital,
+            "min_commission": min_commission,
+            "stamp_duty": stamp_duty
         }
         save_json(self.setting_filename, backtesting_setting)
 
@@ -374,7 +384,9 @@ class BacktesterManager(QtWidgets.QWidget):
             size,
             pricetick,
             capital,
-            new_setting
+            new_setting,
+            min_commission,
+            stamp_duty
         )
 
         if result:
@@ -403,6 +415,8 @@ class BacktesterManager(QtWidgets.QWidget):
         size: float = float(self.size_line.text())
         pricetick: float = float(self.pricetick_line.text())
         capital: float = float(self.capital_line.text())
+        min_commission: float = float(self.min_commission_line.text())
+        stamp_duty: float = float(self.stamp_duty_line.text())
 
         parameters: dict = self.settings[class_name]
         dialog: OptimizationSettingEditor = OptimizationSettingEditor(class_name, parameters)
@@ -426,7 +440,9 @@ class BacktesterManager(QtWidgets.QWidget):
             capital,
             optimization_setting,
             use_ga,
-            max_workers
+            max_workers,
+            min_commission,
+            stamp_duty
         )
 
         self.result_button.setEnabled(False)
@@ -586,12 +602,14 @@ class StatisticsMonitor(QtWidgets.QTableWidget):
         "total_net_pnl": _("总盈亏"),
         "total_commission": _("总手续费"),
         "total_slippage": _("总滑点"),
+        "total_stamp_duty": _("总印花税"),
         "total_turnover": _("总成交额"),
         "total_trade_count": _("总成交笔数"),
 
         "daily_net_pnl": _("日均盈亏"),
         "daily_commission": _("日均手续费"),
         "daily_slippage": _("日均滑点"),
+        "daily_stamp_duty": _("日均印花税"),
         "daily_turnover": _("日均成交额"),
         "daily_trade_count": _("日均成交笔数"),
 
@@ -645,10 +663,12 @@ class StatisticsMonitor(QtWidgets.QTableWidget):
         data["total_net_pnl"] = f"{data['total_net_pnl']:,.2f}"
         data["total_commission"] = f"{data['total_commission']:,.2f}"
         data["total_slippage"] = f"{data['total_slippage']:,.2f}"
+        data["total_stamp_duty"] = f"{data['total_stamp_duty']:,.2f}"
         data["total_turnover"] = f"{data['total_turnover']:,.2f}"
         data["daily_net_pnl"] = f"{data['daily_net_pnl']:,.2f}"
         data["daily_commission"] = f"{data['daily_commission']:,.2f}"
         data["daily_slippage"] = f"{data['daily_slippage']:,.2f}"
+        data["daily_stamp_duty"] = f"{data['daily_stamp_duty']:,.2f}"
         data["daily_turnover"] = f"{data['daily_turnover']:,.2f}"
         data["daily_trade_count"] = f"{data['daily_trade_count']:,.2f}"
         data["daily_return"] = f"{data['daily_return']:,.2f}%"
@@ -1151,6 +1171,7 @@ class DailyResultMonitor(BaseMonitor):
         "turnover": {"display": _("成交额"), "cell": FloatCell, "update": False},
         "commission": {"display": _("手续费"), "cell": FloatCell, "update": False},
         "slippage": {"display": _("滑点"), "cell": FloatCell, "update": False},
+        "stamp_duty": {"display": _("印花税"), "cell": FloatCell, "update": False},
         "trading_pnl": {"display": _("交易盈亏"), "cell": FloatCell, "update": False},
         "holding_pnl": {"display": _("持仓盈亏"), "cell": FloatCell, "update": False},
         "total_pnl": {"display": _("总盈亏"), "cell": FloatCell, "update": False},

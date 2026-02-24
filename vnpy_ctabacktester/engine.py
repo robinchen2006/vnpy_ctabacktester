@@ -190,7 +190,9 @@ class BacktesterEngine(BaseEngine):
         size: int,
         pricetick: float,
         capital: int,
-        setting: dict
+        setting: dict,
+        min_commission: float = 0,
+        stamp_duty: float = 0
     ) -> None:
         """"""
         self.result_df = None
@@ -214,7 +216,9 @@ class BacktesterEngine(BaseEngine):
             size=size,
             pricetick=pricetick,
             capital=capital,
-            mode=mode
+            mode=mode,
+            min_commission=min_commission,
+            stamp_duty=stamp_duty
         )
 
         strategy_class: type[CtaTemplate] = self.classes[class_name]
@@ -260,7 +264,9 @@ class BacktesterEngine(BaseEngine):
         size: float,
         pricetick: float,
         capital: float,
-        setting: dict
+        setting: dict,
+        min_commission: float = 0,
+        stamp_duty: float = 0
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -280,7 +286,9 @@ class BacktesterEngine(BaseEngine):
                 size,
                 pricetick,
                 capital,
-                setting
+                setting,
+                min_commission,
+                stamp_duty
             )
         )
         self.thread.start()
@@ -319,7 +327,9 @@ class BacktesterEngine(BaseEngine):
         capital: int,
         optimization_setting: OptimizationSetting,
         use_ga: bool,
-        max_workers: int | None = None
+        max_workers: int | None = None,
+        min_commission: float = 0,
+        stamp_duty: float = 0
     ) -> None:
         """"""
         self.result_values = None
@@ -342,7 +352,9 @@ class BacktesterEngine(BaseEngine):
             size=size,
             pricetick=pricetick,
             capital=capital,
-            mode=mode
+            mode=mode,
+            min_commission=min_commission,
+            stamp_duty=stamp_duty
         )
 
         strategy_class: type[CtaTemplate] = self.classes[class_name]
@@ -390,7 +402,9 @@ class BacktesterEngine(BaseEngine):
         capital: float,
         optimization_setting: OptimizationSetting,
         use_ga: bool,
-        max_workers: int
+        max_workers: int,
+        min_commission: float = 0,
+        stamp_duty: float = 0
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -412,7 +426,9 @@ class BacktesterEngine(BaseEngine):
                 capital,
                 optimization_setting,
                 use_ga,
-                max_workers
+                max_workers,
+                min_commission,
+                stamp_duty
             )
         )
         self.thread.start()
