@@ -28,7 +28,7 @@ from ..engine import (
     EVENT_BACKTESTER_BACKTESTING_FINISHED,
     EVENT_BACKTESTER_OPTIMIZATION_FINISHED,
     OptimizationSetting,
-    BacktesterEngine
+    BacktesterEngine,
 )
 
 
@@ -48,7 +48,7 @@ class BacktesterManager(QtWidgets.QWidget):
         self.main_engine: MainEngine = main_engine
         self.event_engine: EventEngine = event_engine
 
-        self.backtester_engine: BacktesterEngine = main_engine.get_engine(APP_NAME)     # type: ignore
+        self.backtester_engine: BacktesterEngine = main_engine.get_engine(APP_NAME)  # type: ignore
         self.class_names: list = []
         self.settings: dict = {}
 
@@ -88,11 +88,7 @@ class BacktesterManager(QtWidgets.QWidget):
         start_dt: datetime = end_dt - timedelta(days=3 * 365)
 
         self.start_date_edit: QtWidgets.QDateEdit = QtWidgets.QDateEdit(
-            QtCore.QDate(
-                start_dt.year,
-                start_dt.month,
-                start_dt.day
-            )
+            QtCore.QDate(start_dt.year, start_dt.month, start_dt.day)
         )
         self.end_date_edit: QtWidgets.QDateEdit = QtWidgets.QDateEdit(
             QtCore.QDate.currentDate()
@@ -109,7 +105,9 @@ class BacktesterManager(QtWidgets.QWidget):
         backtesting_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("开始回测"))
         backtesting_button.clicked.connect(self.start_backtesting)
 
-        optimization_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("参数优化"))
+        optimization_button: QtWidgets.QPushButton = QtWidgets.QPushButton(
+            _("参数优化")
+        )
         optimization_button.clicked.connect(self.start_optimization)
 
         self.result_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("优化结果"))
@@ -151,7 +149,7 @@ class BacktesterManager(QtWidgets.QWidget):
             self.daily_button,
             self.candle_button,
             edit_button,
-            reload_button
+            reload_button,
         ]:
             button.setFixedHeight(button.sizeHint().height() * 2)
 
@@ -201,19 +199,16 @@ class BacktesterManager(QtWidgets.QWidget):
             self.main_engine,
             self.event_engine,
             _("回测成交记录"),
-            BacktestingTradeMonitor
+            BacktestingTradeMonitor,
         )
         self.order_dialog: BacktestingResultDialog = BacktestingResultDialog(
             self.main_engine,
             self.event_engine,
             _("回测委托记录"),
-            BacktestingOrderMonitor
+            BacktestingOrderMonitor,
         )
         self.daily_dialog: BacktestingResultDialog = BacktestingResultDialog(
-            self.main_engine,
-            self.event_engine,
-            _("回测每日盈亏"),
-            DailyResultMonitor
+            self.main_engine, self.event_engine, _("回测每日盈亏"), DailyResultMonitor
         )
 
         # Candle Chart
@@ -275,13 +270,20 @@ class BacktesterManager(QtWidgets.QWidget):
         """"""
         self.signal_log.connect(self.process_log_event)
         self.signal_backtesting_finished.connect(
-            self.process_backtesting_finished_event)
+            self.process_backtesting_finished_event
+        )
         self.signal_optimization_finished.connect(
-            self.process_optimization_finished_event)
+            self.process_optimization_finished_event
+        )
 
         self.event_engine.register(EVENT_BACKTESTER_LOG, self.signal_log.emit)
-        self.event_engine.register(EVENT_BACKTESTER_BACKTESTING_FINISHED, self.signal_backtesting_finished.emit)
-        self.event_engine.register(EVENT_BACKTESTER_OPTIMIZATION_FINISHED, self.signal_optimization_finished.emit)
+        self.event_engine.register(
+            EVENT_BACKTESTER_BACKTESTING_FINISHED, self.signal_backtesting_finished.emit
+        )
+        self.event_engine.register(
+            EVENT_BACKTESTER_OPTIMIZATION_FINISHED,
+            self.signal_optimization_finished.emit,
+        )
 
     def process_log_event(self, event: Event) -> None:
         """"""
@@ -359,13 +361,15 @@ class BacktesterManager(QtWidgets.QWidget):
             "pricetick": pricetick,
             "capital": capital,
             "min_commission": min_commission,
-            "stamp_duty": stamp_duty
+            "stamp_duty": stamp_duty,
         }
         save_json(self.setting_filename, backtesting_setting)
 
         # Get strategy setting
         old_setting: dict = self.settings[class_name]
-        dialog: BacktestingSettingEditor = BacktestingSettingEditor(class_name, old_setting)
+        dialog: BacktestingSettingEditor = BacktestingSettingEditor(
+            class_name, old_setting
+        )
         i: int = dialog.exec()
         if i != dialog.DialogCode.Accepted:
             return
@@ -386,7 +390,7 @@ class BacktesterManager(QtWidgets.QWidget):
             capital,
             new_setting,
             min_commission,
-            stamp_duty
+            stamp_duty,
         )
 
         if result:
@@ -419,7 +423,9 @@ class BacktesterManager(QtWidgets.QWidget):
         stamp_duty: float = float(self.stamp_duty_line.text())
 
         parameters: dict = self.settings[class_name]
-        dialog: OptimizationSettingEditor = OptimizationSettingEditor(class_name, parameters)
+        dialog: OptimizationSettingEditor = OptimizationSettingEditor(
+            class_name, parameters
+        )
         i: int = dialog.exec()
         if i != dialog.DialogCode.Accepted:
             return
@@ -442,7 +448,7 @@ class BacktesterManager(QtWidgets.QWidget):
             use_ga,
             max_workers,
             min_commission,
-            stamp_duty
+            stamp_duty,
         )
 
         self.result_button.setEnabled(False)
@@ -459,7 +465,7 @@ class BacktesterManager(QtWidgets.QWidget):
             start_date.month(),
             start_date.day(),
         )
-        start= start.replace(tzinfo=DB_TZ)
+        start = start.replace(tzinfo=DB_TZ)
 
         end: datetime = datetime(
             end_date.year(),
@@ -471,12 +477,7 @@ class BacktesterManager(QtWidgets.QWidget):
         )
         end = end.replace(tzinfo=DB_TZ)
 
-        self.backtester_engine.start_downloading(
-            vt_symbol,
-            interval,
-            start,
-            end
-        )
+        self.backtester_engine.start_downloading(vt_symbol, interval, start, end)
 
     def show_optimization_result(self) -> None:
         """"""
@@ -485,8 +486,7 @@ class BacktesterManager(QtWidgets.QWidget):
             return
 
         dialog: OptimizationResultMonitor = OptimizationResultMonitor(
-            result_values,
-            self.target_display
+            result_values, self.target_display
         )
         dialog.exec_()
 
@@ -535,10 +535,10 @@ class BacktesterManager(QtWidgets.QWidget):
 
         # 按优先级排序的常用代码编辑器命令列表
         editor_cmds: list[str] = [
-            "code",         # VS Code
-            "cursor",       # Cursor
-            "pycharm64",    # PyCharm (Windows)
-            "charm",        # PyCharm (命令行启动器)
+            "code",  # VS Code
+            "cursor",  # Cursor
+            "pycharm64",  # PyCharm (Windows)
+            "charm",  # PyCharm (命令行启动器)
         ]
 
         # 查找可用的编辑器
@@ -557,8 +557,10 @@ class BacktesterManager(QtWidgets.QWidget):
             QtWidgets.QMessageBox.warning(
                 self,
                 _("启动代码编辑器失败"),
-                _("未检测到可用的代码编辑器，请安装以下任一编辑器并添加到系统PATH：\n"
-                  "Cursor、VS Code、PyCharm")
+                _(
+                    "未检测到可用的代码编辑器，请安装以下任一编辑器并添加到系统PATH：\n"
+                    "Cursor、VS Code、PyCharm"
+                ),
             )
 
     def reload_strategy_class(self) -> None:
@@ -580,17 +582,15 @@ class BacktesterManager(QtWidgets.QWidget):
 
 class StatisticsMonitor(QtWidgets.QTableWidget):
     """"""
+
     KEY_NAME_MAP: dict = {
         "start_date": _("首个交易日"),
         "end_date": _("最后交易日"),
-
         "total_days": _("总交易日"),
         "profit_days": _("盈利交易日"),
         "loss_days": _("亏损交易日"),
-
         "capital": _("起始资金"),
         "end_balance": _("结束资金"),
-
         "total_return": _("总收益率"),
         "benchmark_return": _("基准收益率"),
         "excess_return": _("超额收益率"),
@@ -598,26 +598,23 @@ class StatisticsMonitor(QtWidgets.QTableWidget):
         "max_drawdown": _("最大回撤"),
         "max_ddpercent": _("百分比最大回撤"),
         "max_drawdown_duration": _("最大回撤天数"),
-
         "total_net_pnl": _("总盈亏"),
         "total_commission": _("总手续费"),
         "total_slippage": _("总滑点"),
         "total_stamp_duty": _("总印花税"),
         "total_turnover": _("总成交额"),
         "total_trade_count": _("总成交笔数"),
-
         "daily_net_pnl": _("日均盈亏"),
         "daily_commission": _("日均手续费"),
         "daily_slippage": _("日均滑点"),
         "daily_stamp_duty": _("日均印花税"),
         "daily_turnover": _("日均成交额"),
         "daily_trade_count": _("日均成交笔数"),
-
         "daily_return": _("日均收益率"),
         "return_std": _("收益标准差"),
         "sharpe_ratio": _("夏普比率"),
         "ewm_sharpe": _("EWM夏普"),
-        "return_drawdown_ratio": _("收益回撤比")
+        "return_drawdown_ratio": _("收益回撤比"),
     }
 
     def __init__(self) -> None:
@@ -687,9 +684,7 @@ class BacktestingSettingEditor(QtWidgets.QDialog):
     For creating new strategy and editing strategy parameters.
     """
 
-    def __init__(
-        self, class_name: str, parameters: dict
-    ) -> None:
+    def __init__(self, class_name: str, parameters: dict) -> None:
         """"""
         super().__init__()
 
@@ -777,36 +772,34 @@ class BacktesterChart(pg.GraphicsLayoutWidget):
         # Create plot widgets
         self.balance_plot = self.addPlot(
             title=_("账户净值"),
-            axisItems={"bottom": DateAxis(self.dates, orientation="bottom")}
+            axisItems={"bottom": DateAxis(self.dates, orientation="bottom")},
         )
         self.nextRow()
 
         self.drawdown_plot = self.addPlot(
             title=_("净值回撤"),
-            axisItems={"bottom": DateAxis(self.dates, orientation="bottom")}
+            axisItems={"bottom": DateAxis(self.dates, orientation="bottom")},
         )
         self.nextRow()
 
         self.pnl_plot = self.addPlot(
             title=_("每日盈亏"),
-            axisItems={"bottom": DateAxis(self.dates, orientation="bottom")}
+            axisItems={"bottom": DateAxis(self.dates, orientation="bottom")},
         )
         self.nextRow()
 
         self.distribution_plot = self.addPlot(title=_("盈亏分布"))
 
         # Add curves and bars on plot widgets
-        self.balance_curve = self.balance_plot.plot(
-            pen=pg.mkPen("#ffc107", width=3)
-        )
+        self.balance_curve = self.balance_plot.plot(pen=pg.mkPen("#ffc107", width=3))
 
         dd_color: str = "#303f9f"
         self.drawdown_curve = self.drawdown_plot.plot(
             fillLevel=-0.3, brush=dd_color, pen=dd_color
         )
 
-        profit_color: str = 'r'
-        loss_color: str = 'g'
+        profit_color: str = "r"
+        loss_color: str = "g"
         self.profit_pnl_bar = pg.BarGraphItem(
             x=[], height=[], width=0.3, brush=profit_color, pen=profit_color
         )
@@ -841,8 +834,8 @@ class BacktesterChart(pg.GraphicsLayoutWidget):
             self.dates[n] = date
 
         # Set data for curve of balance and drawdown
-        self.balance_curve.setData(df["balance"])
-        self.drawdown_curve.setData(df["drawdown"])
+        self.balance_curve.setData(df["balance"].to_numpy())
+        self.drawdown_curve.setData(df["drawdown"].to_numpy())
 
         # Set data for daily pnl bar
         profit_pnl_x: list = []
@@ -888,17 +881,16 @@ class OptimizationSettingEditor(QtWidgets.QDialog):
     """
     For setting up parameters for optimization.
     """
+
     DISPLAY_NAME_MAP: dict = {
         _("总收益率"): "total_return",
         _("夏普比率"): "sharpe_ratio",
         _("EWM夏普"): "ewm_sharpe",
         _("收益回撤比"): "return_drawdown_ratio",
-        _("日均盈亏"): "daily_net_pnl"
+        _("日均盈亏"): "daily_net_pnl",
     }
 
-    def __init__(
-        self, class_name: str, parameters: dict
-    ) -> None:
+    def __init__(self, class_name: str, parameters: dict) -> None:
         """"""
         super().__init__()
 
@@ -958,7 +950,7 @@ class OptimizationSettingEditor(QtWidgets.QDialog):
                 "type": type_,
                 "start": start_edit,
                 "step": step_edit,
-                "end": end_edit
+                "end": end_edit,
             }
 
             row += 1
@@ -1011,10 +1003,7 @@ class OptimizationSettingEditor(QtWidgets.QDialog):
                 self.optimization_setting.add_parameter(name, start_value)
             else:
                 self.optimization_setting.add_parameter(
-                    name,
-                    start_value,
-                    end_value,
-                    step_value
+                    name, start_value, end_value, step_value
                 )
 
         self.accept()
@@ -1029,9 +1018,7 @@ class OptimizationResultMonitor(QtWidgets.QDialog):
     For viewing optimization result.
     """
 
-    def __init__(
-        self, result_values: list, target_display: str
-    ) -> None:
+    def __init__(self, result_values: list, target_display: str) -> None:
         """"""
         super().__init__()
 
@@ -1063,8 +1050,12 @@ class OptimizationResultMonitor(QtWidgets.QDialog):
 
         for n, tp in enumerate(self.result_values):
             setting, target_value, __ = tp
-            setting_cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(str(setting))
-            target_cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(f"{target_value:.2f}")
+            setting_cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(
+                str(setting)
+            )
+            target_cell: QtWidgets.QTableWidgetItem = QtWidgets.QTableWidgetItem(
+                f"{target_value:.2f}"
+            )
 
             setting_cell.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
             target_cell.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -1091,7 +1082,8 @@ class OptimizationResultMonitor(QtWidgets.QDialog):
         Save table data into a csv file
         """
         path, __ = QtWidgets.QFileDialog.getSaveFileName(
-            self, _("保存数据"), "", "CSV(*.csv)")
+            self, _("保存数据"), "", "CSV(*.csv)"
+        )
 
         if not path:
             return
@@ -1187,7 +1179,7 @@ class BacktestingResultDialog(QtWidgets.QDialog):
         main_engine: MainEngine,
         event_engine: EventEngine,
         title: str,
-        table_class: type[BaseMonitor]
+        table_class: type[BaseMonitor],
     ) -> None:
         """"""
         super().__init__()
@@ -1363,7 +1355,9 @@ class CandleChartDialog(QtWidgets.QDialog):
             else:
                 color = "g"
 
-            pen: QtGui.QPen = pg.mkPen(color, width=1.5, style=QtCore.Qt.PenStyle.DashLine)
+            pen: QtGui.QPen = pg.mkPen(
+                color, width=1.5, style=QtCore.Qt.PenStyle.DashLine
+            )
             item: pg.PlotCurveItem = pg.PlotCurveItem(x, y, pen=pen)
 
             self.items.append(item)
@@ -1399,7 +1393,7 @@ class CandleChartDialog(QtWidgets.QDialog):
                 "size": size,
                 "pen": pen,
                 "brush": brush,
-                "symbol": open_symbol
+                "symbol": open_symbol,
             }
 
             close_scatter: dict = {
@@ -1407,7 +1401,7 @@ class CandleChartDialog(QtWidgets.QDialog):
                 "size": size,
                 "pen": pen,
                 "brush": brush,
-                "symbol": close_symbol
+                "symbol": close_symbol,
             }
 
             scatter_data.append(open_scatter)
@@ -1416,8 +1410,12 @@ class CandleChartDialog(QtWidgets.QDialog):
             # Trade text
             volume = d["volume"]
             text_color: QtGui.QColor = QtGui.QColor(scatter_color)
-            open_text: pg.TextItem = pg.TextItem(f"[{volume}]", color=text_color, anchor=(0.5, 0.5))
-            close_text: pg.TextItem = pg.TextItem(f"[{volume}]", color=text_color, anchor=(0.5, 0.5))
+            open_text: pg.TextItem = pg.TextItem(
+                f"[{volume}]", color=text_color, anchor=(0.5, 0.5)
+            )
+            close_text: pg.TextItem = pg.TextItem(
+                f"[{volume}]", color=text_color, anchor=(0.5, 0.5)
+            )
 
             open_text.setPos(open_ix, open_y - open_side * y_adjustment * 3)
             close_text.setPos(close_ix, close_y - close_side * y_adjustment * 3)
