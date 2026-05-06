@@ -22,7 +22,7 @@ from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
 from vnpy_ctastrategy.backtesting import (
     BacktestingEngine,
     OptimizationSetting,
-    BacktestingMode
+    BacktestingMode,
 )
 from .locale import _
 
@@ -99,9 +99,13 @@ class BacktesterEngine(BaseEngine):
             if folder.is_dir() and "Strategy" in folder.name:
                 module_name: str = f"strategies.{folder.name}"
                 self.load_strategy_class_from_folder(folder, module_name)
-                print(f"Loaded strategies from subfolder: {folder},module: {module_name}")
+                print(
+                    f"Loaded strategies from subfolder: {folder},module: {module_name}"
+                )
 
-    def load_strategy_class_from_folder(self, path: Path, module_name: str = "") -> None:
+    def load_strategy_class_from_folder(
+        self, path: Path, module_name: str = ""
+    ) -> None:
         """
         Load strategy class from certain folder.
         """
@@ -147,8 +151,9 @@ class BacktesterEngine(BaseEngine):
                         importlib.reload(m)
                     except Exception:
                         self.write_log(
-                            _("重载依赖模块{}失败：\n{}")
-                            .format(getattr(m, "__name__", str(m)), traceback.format_exc())
+                            _("重载依赖模块{}失败：\n{}").format(
+                                getattr(m, "__name__", str(m)), traceback.format_exc()
+                            )
                         )
             except Exception:
                 # Ignore errors from scanning/reloading imported modules
@@ -192,7 +197,7 @@ class BacktesterEngine(BaseEngine):
         capital: int,
         setting: dict,
         min_commission: float = 0,
-        stamp_duty: float = 0
+        stamp_duty: float = 0,
     ) -> None:
         """"""
         self.result_df = None
@@ -218,14 +223,11 @@ class BacktesterEngine(BaseEngine):
             capital=capital,
             mode=mode,
             min_commission=min_commission,
-            stamp_duty=stamp_duty
+            stamp_duty=stamp_duty,
         )
 
         strategy_class: type[CtaTemplate] = self.classes[class_name]
-        engine.add_strategy(
-            strategy_class,
-            setting
-        )
+        engine.add_strategy(strategy_class, setting)
 
         engine.load_data()
         if not engine.history_data:
@@ -266,7 +268,7 @@ class BacktesterEngine(BaseEngine):
         capital: float,
         setting: dict,
         min_commission: float = 0,
-        stamp_duty: float = 0
+        stamp_duty: float = 0,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -288,8 +290,8 @@ class BacktesterEngine(BaseEngine):
                 capital,
                 setting,
                 min_commission,
-                stamp_duty
-            )
+                stamp_duty,
+            ),
         )
         self.thread.start()
 
@@ -329,7 +331,7 @@ class BacktesterEngine(BaseEngine):
         use_ga: bool,
         max_workers: int | None = None,
         min_commission: float = 0,
-        stamp_duty: float = 0
+        stamp_duty: float = 0,
     ) -> None:
         """"""
         self.result_values = None
@@ -354,14 +356,11 @@ class BacktesterEngine(BaseEngine):
             capital=capital,
             mode=mode,
             min_commission=min_commission,
-            stamp_duty=stamp_duty
+            stamp_duty=stamp_duty,
         )
 
         strategy_class: type[CtaTemplate] = self.classes[class_name]
-        engine.add_strategy(
-            strategy_class,
-            {}
-        )
+        engine.add_strategy(strategy_class, {})
 
         # 0则代表不限制
         if max_workers == 0:
@@ -369,15 +368,11 @@ class BacktesterEngine(BaseEngine):
 
         if use_ga:
             self.result_values = engine.run_ga_optimization(
-                optimization_setting,
-                output=False,
-                max_workers=max_workers
+                optimization_setting, output=False, max_workers=max_workers
             )
         else:
             self.result_values = engine.run_bf_optimization(
-                optimization_setting,
-                output=False,
-                max_workers=max_workers
+                optimization_setting, output=False, max_workers=max_workers
             )
 
         # Clear thread object handler.
@@ -404,7 +399,7 @@ class BacktesterEngine(BaseEngine):
         use_ga: bool,
         max_workers: int,
         min_commission: float = 0,
-        stamp_duty: float = 0
+        stamp_duty: float = 0,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -428,19 +423,15 @@ class BacktesterEngine(BaseEngine):
                 use_ga,
                 max_workers,
                 min_commission,
-                stamp_duty
-            )
+                stamp_duty,
+            ),
         )
         self.thread.start()
 
         return True
 
     def run_downloading(
-        self,
-        vt_symbol: str,
-        interval: str,
-        start: datetime,
-        end: datetime
+        self, vt_symbol: str, interval: str, start: datetime, end: datetime
     ) -> None:
         """
         执行下载任务
@@ -459,17 +450,23 @@ class BacktesterEngine(BaseEngine):
             exchange=exchange,
             interval=Interval(interval),
             start=start,
-            end=end
+            end=end,
         )
 
         try:
             if interval == "tick":
-                tick_data: list[TickData] = self.datafeed.query_tick_history(req, self.write_log)
+                tick_data: list[TickData] = self.datafeed.query_tick_history(
+                    req, self.write_log
+                )
                 if tick_data:
                     self.database.save_tick_data(tick_data)
-                    self.write_log(_("{}-{}历史数据下载完成").format(vt_symbol, interval))
+                    self.write_log(
+                        _("{}-{}历史数据下载完成").format(vt_symbol, interval)
+                    )
                 else:
-                    self.write_log(_("数据下载失败，无法获取{}的历史数据").format(vt_symbol))
+                    self.write_log(
+                        _("数据下载失败，无法获取{}的历史数据").format(vt_symbol)
+                    )
             else:
                 contract: ContractData | None = self.main_engine.get_contract(vt_symbol)
 
@@ -484,9 +481,13 @@ class BacktesterEngine(BaseEngine):
 
                 if bar_data:
                     self.database.save_bar_data(bar_data)
-                    self.write_log(_("{}-{}历史数据下载完成").format(vt_symbol, interval))
+                    self.write_log(
+                        _("{}-{}历史数据下载完成").format(vt_symbol, interval)
+                    )
                 else:
-                    self.write_log(_("数据下载失败，无法获取{}的历史数据").format(vt_symbol))
+                    self.write_log(
+                        _("数据下载失败，无法获取{}的历史数据").format(vt_symbol)
+                    )
         except Exception:
             msg: str = _("数据下载失败，触发异常：\n{}").format(traceback.format_exc())
             self.write_log(msg)
@@ -495,11 +496,7 @@ class BacktesterEngine(BaseEngine):
         self.thread = None
 
     def start_downloading(
-        self,
-        vt_symbol: str,
-        interval: str,
-        start: datetime,
-        end: datetime
+        self, vt_symbol: str, interval: str, start: datetime, end: datetime
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -507,13 +504,7 @@ class BacktesterEngine(BaseEngine):
 
         self.write_log("-" * 40)
         self.thread = Thread(
-            target=self.run_downloading,
-            args=(
-                vt_symbol,
-                interval,
-                start,
-                end
-            )
+            target=self.run_downloading, args=(vt_symbol, interval, start, end)
         )
         self.thread.start()
 
