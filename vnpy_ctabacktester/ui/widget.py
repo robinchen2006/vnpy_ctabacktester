@@ -35,6 +35,7 @@ from ..engine import (
 DEFAULT_COMMISSION_BPS: float = 1.0
 DEFAULT_SLIPPAGE_BPS: float = 3.0
 DEFAULT_STAMP_TAX_BPS: float = 5.0
+DEFAULT_RISK_FREE_PERCENT: float = 2.5
 
 
 class BacktesterManager(QtWidgets.QWidget):
@@ -113,6 +114,9 @@ class BacktesterManager(QtWidgets.QWidget):
         self.stamp_tax_bps_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit(
             str(DEFAULT_STAMP_TAX_BPS)
         )
+        self.risk_free_percent_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit(
+            str(DEFAULT_RISK_FREE_PERCENT)
+        )
 
         backtesting_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("开始回测"))
         backtesting_button.clicked.connect(self.start_backtesting)
@@ -179,6 +183,8 @@ class BacktesterManager(QtWidgets.QWidget):
         form.addRow(_("合约乘数"), self.size_line)
         form.addRow(_("价格跳动"), self.pricetick_line)
         form.addRow(_("回测资金"), self.capital_line)
+
+        form.addRow(_("无风险利率（%）"), self.risk_free_percent_line)
 
         result_grid: QtWidgets.QGridLayout = QtWidgets.QGridLayout()
         result_grid.addWidget(self.trade_button, 0, 0)
@@ -285,6 +291,10 @@ class BacktesterManager(QtWidgets.QWidget):
         self.pricetick_line.setText(str(setting["pricetick"]))
         self.capital_line.setText(str(setting["capital"]))
         self.min_commission_line.setText(str(setting.get("min_commission", 0)))
+        risk_free_percent: float = float(
+            setting.get("risk_free_percent", DEFAULT_RISK_FREE_PERCENT)
+        )
+        self.risk_free_percent_line.setText(str(risk_free_percent))
         stamp_tax_bps: float = float(
             setting.get("stamp_tax_bps", DEFAULT_STAMP_TAX_BPS)
         )
@@ -362,6 +372,7 @@ class BacktesterManager(QtWidgets.QWidget):
         pricetick: float = float(self.pricetick_line.text())
         capital: float = float(self.capital_line.text())
         min_commission: float = float(self.min_commission_line.text())
+        risk_free_percent: float = float(self.risk_free_percent_line.text())
         stamp_tax_bps: float = float(self.stamp_tax_bps_line.text())
 
         # Check validity of vt_symbol
@@ -388,6 +399,7 @@ class BacktesterManager(QtWidgets.QWidget):
             "capital": capital,
             "min_commission": min_commission,
             "stamp_tax_bps": stamp_tax_bps,
+            "risk_free_percent": risk_free_percent,
         }
         save_json(self.setting_filename, backtesting_setting)
 
@@ -418,6 +430,7 @@ class BacktesterManager(QtWidgets.QWidget):
             min_commission,
             stamp_tax_bps / 10_000,
             slippage_bps / 10_000,
+            risk_free_percent / 100,
         )
 
         if result:
@@ -450,6 +463,8 @@ class BacktesterManager(QtWidgets.QWidget):
         min_commission: float = float(self.min_commission_line.text())
         stamp_tax_bps: float = float(self.stamp_tax_bps_line.text())
 
+        risk_free_percent: float = float(self.risk_free_percent_line.text())
+
         parameters: dict = self.settings[class_name]
         dialog: OptimizationSettingEditor = OptimizationSettingEditor(
             class_name, parameters
@@ -478,6 +493,7 @@ class BacktesterManager(QtWidgets.QWidget):
             min_commission,
             stamp_tax_bps / 10_000,
             slippage_bps / 10_000,
+            risk_free_percent / 100,
         )
 
         self.result_button.setEnabled(False)

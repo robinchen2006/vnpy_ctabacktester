@@ -33,6 +33,8 @@ EVENT_BACKTESTER_LOG = "eBacktesterLog"
 EVENT_BACKTESTER_BACKTESTING_FINISHED = "eBacktesterBacktestingFinished"
 EVENT_BACKTESTER_OPTIMIZATION_FINISHED = "eBacktesterOptimizationFinished"
 
+DEFAULT_RISK_FREE_RATE: float = 2.5 / 100
+
 
 class BacktesterEngine(BaseEngine):
     """
@@ -200,6 +202,7 @@ class BacktesterEngine(BaseEngine):
         min_commission: float = 0,
         stamp_duty: float = 0,
         slippage_rate: float = DEFAULT_SLIPPAGE_RATE,
+        risk_free: float = DEFAULT_RISK_FREE_RATE,
     ) -> None:
         """"""
         self.result_df = None
@@ -223,6 +226,7 @@ class BacktesterEngine(BaseEngine):
             size=size,
             pricetick=pricetick,
             capital=capital,
+            risk_free=risk_free,
             mode=mode,
             min_commission=min_commission,
             stamp_duty=stamp_duty,
@@ -273,6 +277,7 @@ class BacktesterEngine(BaseEngine):
         min_commission: float = 0,
         stamp_duty: float = 0,
         slippage_rate: float = DEFAULT_SLIPPAGE_RATE,
+        risk_free: float = DEFAULT_RISK_FREE_RATE,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -296,6 +301,7 @@ class BacktesterEngine(BaseEngine):
                 min_commission,
                 stamp_duty,
                 slippage_rate,
+                risk_free,
             ),
         )
         self.thread.start()
@@ -338,6 +344,7 @@ class BacktesterEngine(BaseEngine):
         min_commission: float = 0,
         stamp_duty: float = 0,
         slippage_rate: float = DEFAULT_SLIPPAGE_RATE,
+        risk_free: float = DEFAULT_RISK_FREE_RATE,
     ) -> None:
         """"""
         self.result_values = None
@@ -360,6 +367,7 @@ class BacktesterEngine(BaseEngine):
             size=size,
             pricetick=pricetick,
             capital=capital,
+            risk_free=risk_free,
             mode=mode,
             min_commission=min_commission,
             stamp_duty=stamp_duty,
@@ -408,6 +416,7 @@ class BacktesterEngine(BaseEngine):
         min_commission: float = 0,
         stamp_duty: float = 0,
         slippage_rate: float = DEFAULT_SLIPPAGE_RATE,
+        risk_free: float = DEFAULT_RISK_FREE_RATE,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -433,6 +442,7 @@ class BacktesterEngine(BaseEngine):
                 min_commission,
                 stamp_duty,
                 slippage_rate,
+                risk_free,
             ),
         )
         self.thread.start()
