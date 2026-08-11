@@ -19,11 +19,7 @@ from vnpy.chart import ChartWidget, CandleItem, VolumeItem
 from vnpy.trader.utility import load_json, save_json
 from vnpy.trader.object import BarData, TradeData, OrderData
 from vnpy.trader.database import DB_TZ
-from vnpy_ctastrategy.backtesting import (
-    DEFAULT_SLIPPAGE_RATE,
-    DailyResult,
-    SlippageMode,
-)
+from vnpy_ctastrategy.backtesting import DailyResult
 
 from ..locale import _
 from ..engine import (
@@ -34,6 +30,11 @@ from ..engine import (
     OptimizationSetting,
     BacktesterEngine,
 )
+
+
+DEFAULT_COMMISSION_BPS: float = 1.0
+DEFAULT_SLIPPAGE_BPS: float = 3.0
+DEFAULT_STAMP_TAX_BPS: float = 5.0
 
 
 class BacktesterManager(QtWidgets.QWidget):
@@ -98,19 +99,20 @@ class BacktesterManager(QtWidgets.QWidget):
             QtCore.QDate.currentDate()
         )
 
-        self.rate_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("1.0")
-        self.slippage_mode_combo: QtWidgets.QComboBox = QtWidgets.QComboBox()
-        self.slippage_mode_combo.addItem(_("价格单位滑点"), SlippageMode.FIXED.value)
-        self.slippage_mode_combo.addItem(_("成交金额比例滑点"), SlippageMode.RATE.value)
-        self.slippage_mode_combo.setCurrentIndex(
-            self.slippage_mode_combo.findData(SlippageMode.RATE.value)
+        self.commission_bps_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit(
+            str(DEFAULT_COMMISSION_BPS)
         )
-        self.slippage_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("3.0")
+        self.slippage_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("0.0")
+        self.slippage_bps_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit(
+            str(DEFAULT_SLIPPAGE_BPS)
+        )
         self.size_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("300")
         self.pricetick_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("0.2")
         self.capital_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("1000000")
         self.min_commission_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("5")
-        self.stamp_duty_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit("5.0")
+        self.stamp_tax_bps_line: QtWidgets.QLineEdit = QtWidgets.QLineEdit(
+            str(DEFAULT_STAMP_TAX_BPS)
+        )
 
         backtesting_button: QtWidgets.QPushButton = QtWidgets.QPushButton(_("开始回测"))
         backtesting_button.clicked.connect(self.start_backtesting)
@@ -169,11 +171,11 @@ class BacktesterManager(QtWidgets.QWidget):
         form.addRow(_("K线周期"), self.interval_combo)
         form.addRow(_("开始日期"), self.start_date_edit)
         form.addRow(_("结束日期"), self.end_date_edit)
-        form.addRow(_("佣金费率（bp）"), self.rate_line)
+        form.addRow(_("佣金费率（bp）"), self.commission_bps_line)
         form.addRow(_("最低佣金"), self.min_commission_line)
-        form.addRow(_("印花税率（bp）"), self.stamp_duty_line)
-        form.addRow(_("滑点模式"), self.slippage_mode_combo)
-        form.addRow(_("交易滑点（bp或价格单位）"), self.slippage_line)
+        form.addRow(_("印花税率（bp）"), self.stamp_tax_bps_line)
+        form.addRow(_("价格单位滑点"), self.slippage_line)
+        form.addRow(_("比例滑点（bp）"), self.slippage_bps_line)
         form.addRow(_("合约乘数"), self.size_line)
         form.addRow(_("价格跳动"), self.pricetick_line)
         form.addRow(_("回测资金"), self.capital_line)
@@ -269,45 +271,24 @@ class BacktesterManager(QtWidgets.QWidget):
             start_dt: QtCore.QDate = QtCore.QDate.fromString(start_str, "yyyy-MM-dd")
             self.start_date_edit.setDate(start_dt)
 
-        commission_bps: float = setting.get(
-            "commission_bps", float(setting.get("rate", 0)) * 10_000
+        commission_bps: float = float(
+            setting.get("commission_bps", DEFAULT_COMMISSION_BPS)
         )
-        self.rate_line.setText(str(commission_bps))
+        self.commission_bps_line.setText(str(commission_bps))
 
-        slippage_mode_value: str = setting.get(
-            "slippage_mode", SlippageMode.FIXED.value
+        self.slippage_line.setText(str(setting.get("slippage", 0.0)))
+        slippage_bps: float = float(
+            setting.get("slippage_bps", DEFAULT_SLIPPAGE_BPS)
         )
-        mode_index: int = self.slippage_mode_combo.findData(slippage_mode_value)
-        if mode_index >= 0:
-            self.slippage_mode_combo.setCurrentIndex(mode_index)
-
-        if slippage_mode_value == SlippageMode.RATE.value:
-            slippage_value: float = setting.get(
-                "slippage_bps",
-                float(setting.get("slippage_rate", DEFAULT_SLIPPAGE_RATE)) * 10_000,
-            )
-        else:
-            slippage_value = setting.get("slippage", 0.0)
-        self.slippage_line.setText(str(slippage_value))
+        self.slippage_bps_line.setText(str(slippage_bps))
         self.size_line.setText(str(setting["size"]))
         self.pricetick_line.setText(str(setting["pricetick"]))
         self.capital_line.setText(str(setting["capital"]))
         self.min_commission_line.setText(str(setting.get("min_commission", 0)))
-        stamp_tax_bps: float = setting.get(
-            "stamp_tax_bps", float(setting.get("stamp_duty", 0)) * 10_000
+        stamp_tax_bps: float = float(
+            setting.get("stamp_tax_bps", DEFAULT_STAMP_TAX_BPS)
         )
-        self.stamp_duty_line.setText(str(stamp_tax_bps))
-
-    def get_slippage_parameters(
-        self,
-    ) -> tuple[SlippageMode, float, float, float]:
-        """Return mode, fixed value, decimal rate and rate in basis points."""
-        mode = SlippageMode(self.slippage_mode_combo.currentData())
-        value_bps: float = float(self.slippage_line.text())
-
-        if mode == SlippageMode.FIXED:
-            return mode, value_bps, 0.0, 0.0
-        return mode, 0.0, value_bps / 10_000, value_bps
+        self.stamp_tax_bps_line.setText(str(stamp_tax_bps))
 
     def register_event(self) -> None:
         """"""
@@ -374,17 +355,14 @@ class BacktesterManager(QtWidgets.QWidget):
         interval: str = self.interval_combo.currentText()
         start: datetime = cast(datetime, self.start_date_edit.dateTime().toPython())
         end: datetime = cast(datetime, self.end_date_edit.dateTime().toPython())
-        commission_bps: float = float(self.rate_line.text())
-        rate: float = commission_bps / 10_000
-        slippage_mode, slippage, slippage_rate, slippage_bps = (
-            self.get_slippage_parameters()
-        )
+        commission_bps: float = float(self.commission_bps_line.text())
+        slippage: float = float(self.slippage_line.text())
+        slippage_bps: float = float(self.slippage_bps_line.text())
         size: float = float(self.size_line.text())
         pricetick: float = float(self.pricetick_line.text())
         capital: float = float(self.capital_line.text())
         min_commission: float = float(self.min_commission_line.text())
-        stamp_tax_bps: float = float(self.stamp_duty_line.text())
-        stamp_duty: float = stamp_tax_bps / 10_000
+        stamp_tax_bps: float = float(self.stamp_tax_bps_line.text())
 
         # Check validity of vt_symbol
         if "." not in vt_symbol:
@@ -402,17 +380,13 @@ class BacktesterManager(QtWidgets.QWidget):
             "vt_symbol": vt_symbol,
             "interval": interval,
             "start": start.strftime("%Y-%m-%d"),
-            "rate": rate,
             "commission_bps": commission_bps,
             "slippage": slippage,
-            "slippage_mode": slippage_mode.value,
-            "slippage_rate": slippage_rate,
             "slippage_bps": slippage_bps,
             "size": size,
             "pricetick": pricetick,
             "capital": capital,
             "min_commission": min_commission,
-            "stamp_duty": stamp_duty,
             "stamp_tax_bps": stamp_tax_bps,
         }
         save_json(self.setting_filename, backtesting_setting)
@@ -435,16 +409,15 @@ class BacktesterManager(QtWidgets.QWidget):
             interval,
             start,
             end,
-            rate,
+            commission_bps / 10_000,
             slippage,
             size,
             pricetick,
             capital,
             new_setting,
             min_commission,
-            stamp_duty,
-            slippage_mode,
-            slippage_rate,
+            stamp_tax_bps / 10_000,
+            slippage_bps / 10_000,
         )
 
         if result:
@@ -468,15 +441,14 @@ class BacktesterManager(QtWidgets.QWidget):
         interval: str = self.interval_combo.currentText()
         start: datetime = cast(datetime, self.start_date_edit.dateTime().toPython())
         end: datetime = cast(datetime, self.end_date_edit.dateTime().toPython())
-        commission_bps: float = float(self.rate_line.text())
-        rate: float = commission_bps / 10_000
-        slippage_mode, slippage, slippage_rate, _ = self.get_slippage_parameters()
+        commission_bps: float = float(self.commission_bps_line.text())
+        slippage: float = float(self.slippage_line.text())
+        slippage_bps: float = float(self.slippage_bps_line.text())
         size: float = float(self.size_line.text())
         pricetick: float = float(self.pricetick_line.text())
         capital: float = float(self.capital_line.text())
         min_commission: float = float(self.min_commission_line.text())
-        stamp_tax_bps: float = float(self.stamp_duty_line.text())
-        stamp_duty: float = stamp_tax_bps / 10_000
+        stamp_tax_bps: float = float(self.stamp_tax_bps_line.text())
 
         parameters: dict = self.settings[class_name]
         dialog: OptimizationSettingEditor = OptimizationSettingEditor(
@@ -495,7 +467,7 @@ class BacktesterManager(QtWidgets.QWidget):
             interval,
             start,
             end,
-            rate,
+            commission_bps / 10_000,
             slippage,
             size,
             pricetick,
@@ -504,9 +476,8 @@ class BacktesterManager(QtWidgets.QWidget):
             use_ga,
             max_workers,
             min_commission,
-            stamp_duty,
-            slippage_mode,
-            slippage_rate,
+            stamp_tax_bps / 10_000,
+            slippage_bps / 10_000,
         )
 
         self.result_button.setEnabled(False)
