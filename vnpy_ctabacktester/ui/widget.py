@@ -92,9 +92,21 @@ class BacktesterManager(QtWidgets.QWidget):
 
         end_dt: datetime = datetime.now()
         start_dt: datetime = end_dt - timedelta(days=3 * 365)
+        warmup_dt: datetime = start_dt - timedelta(days=30)
 
+        self.warmup_date_edit: QtWidgets.QDateEdit = QtWidgets.QDateEdit(
+            QtCore.QDate(
+                warmup_dt.year,
+                warmup_dt.month,
+                warmup_dt.day,
+            )
+        )
         self.start_date_edit: QtWidgets.QDateEdit = QtWidgets.QDateEdit(
-            QtCore.QDate(start_dt.year, start_dt.month, start_dt.day)
+            QtCore.QDate(
+                start_dt.year,
+                start_dt.month,
+                start_dt.day,
+            )
         )
         self.end_date_edit: QtWidgets.QDateEdit = QtWidgets.QDateEdit(
             QtCore.QDate.currentDate()
@@ -173,6 +185,7 @@ class BacktesterManager(QtWidgets.QWidget):
         form.addRow(_("交易策略"), self.class_combo)
         form.addRow(_("本地代码"), self.symbol_line)
         form.addRow(_("K线周期"), self.interval_combo)
+        form.addRow(_("预热日期"), self.warmup_date_edit)
         form.addRow(_("开始日期"), self.start_date_edit)
         form.addRow(_("结束日期"), self.end_date_edit)
         form.addRow(_("佣金费率（bp）"), self.commission_bps_line)
@@ -274,8 +287,21 @@ class BacktesterManager(QtWidgets.QWidget):
 
         start_str: str = setting.get("start", "")
         if start_str:
-            start_dt: QtCore.QDate = QtCore.QDate.fromString(start_str, "yyyy-MM-dd")
-            self.start_date_edit.setDate(start_dt)
+            start_date: QtCore.QDate = QtCore.QDate.fromString(
+                start_str,
+                "yyyy-MM-dd",
+            )
+            self.start_date_edit.setDate(start_date)
+
+        warmup_str: str = setting.get("warmup", "")
+        if warmup_str:
+            warmup_date: QtCore.QDate = QtCore.QDate.fromString(
+                warmup_str,
+                "yyyy-MM-dd",
+            )
+        else:
+            warmup_date = self.warmup_date_edit.date()
+        self.warmup_date_edit.setDate(warmup_date)
 
         commission_bps: float = float(
             setting.get("commission_bps", DEFAULT_COMMISSION_BPS)
@@ -363,7 +389,14 @@ class BacktesterManager(QtWidgets.QWidget):
 
         vt_symbol: str = self.symbol_line.text()
         interval: str = self.interval_combo.currentText()
-        start: datetime = cast(datetime, self.start_date_edit.dateTime().toPython())
+        warmup: datetime = cast(
+            datetime,
+            self.warmup_date_edit.dateTime().toPython(),
+        )
+        start: datetime = cast(
+            datetime,
+            self.start_date_edit.dateTime().toPython(),
+        )
         end: datetime = cast(datetime, self.end_date_edit.dateTime().toPython())
         commission_bps: float = float(self.commission_bps_line.text())
         slippage: float = float(self.slippage_line.text())
@@ -374,6 +407,13 @@ class BacktesterManager(QtWidgets.QWidget):
         min_commission: float = float(self.min_commission_line.text())
         risk_free_percent: float = float(self.risk_free_percent_line.text())
         stamp_tax_bps: float = float(self.stamp_tax_bps_line.text())
+
+        if warmup > start:
+            self.write_log(_("预热日期不能晚于开始日期"))
+            return
+        if start >= end:
+            self.write_log(_("正式开始日期必须早于结束日期"))
+            return
 
         # Check validity of vt_symbol
         if "." not in vt_symbol:
@@ -390,6 +430,7 @@ class BacktesterManager(QtWidgets.QWidget):
             "class_name": class_name,
             "vt_symbol": vt_symbol,
             "interval": interval,
+            "warmup": warmup.strftime("%Y-%m-%d"),
             "start": start.strftime("%Y-%m-%d"),
             "commission_bps": commission_bps,
             "slippage": slippage,
@@ -419,6 +460,7 @@ class BacktesterManager(QtWidgets.QWidget):
             class_name,
             vt_symbol,
             interval,
+            warmup,
             start,
             end,
             commission_bps / 10_000,
@@ -452,7 +494,14 @@ class BacktesterManager(QtWidgets.QWidget):
         class_name: str = self.class_combo.currentText()
         vt_symbol: str = self.symbol_line.text()
         interval: str = self.interval_combo.currentText()
-        start: datetime = cast(datetime, self.start_date_edit.dateTime().toPython())
+        warmup: datetime = cast(
+            datetime,
+            self.warmup_date_edit.dateTime().toPython(),
+        )
+        start: datetime = cast(
+            datetime,
+            self.start_date_edit.dateTime().toPython(),
+        )
         end: datetime = cast(datetime, self.end_date_edit.dateTime().toPython())
         commission_bps: float = float(self.commission_bps_line.text())
         slippage: float = float(self.slippage_line.text())
@@ -464,6 +513,13 @@ class BacktesterManager(QtWidgets.QWidget):
         stamp_tax_bps: float = float(self.stamp_tax_bps_line.text())
 
         risk_free_percent: float = float(self.risk_free_percent_line.text())
+
+        if warmup > start:
+            self.write_log(_("预热日期不能晚于开始日期"))
+            return
+        if start >= end:
+            self.write_log(_("开始日期必须早于结束日期"))
+            return
 
         parameters: dict = self.settings[class_name]
         dialog: OptimizationSettingEditor = OptimizationSettingEditor(
@@ -480,6 +536,7 @@ class BacktesterManager(QtWidgets.QWidget):
             class_name,
             vt_symbol,
             interval,
+            warmup,
             start,
             end,
             commission_bps / 10_000,
@@ -502,7 +559,7 @@ class BacktesterManager(QtWidgets.QWidget):
         """"""
         vt_symbol: str = self.symbol_line.text()
         interval: str = self.interval_combo.currentText()
-        start_date: QtCore.QDate = self.start_date_edit.date()
+        start_date: QtCore.QDate = self.warmup_date_edit.date()
         end_date: QtCore.QDate = self.end_date_edit.date()
 
         start: datetime = datetime(
