@@ -21,8 +21,10 @@ import vnpy_ctastrategy
 from vnpy_ctastrategy import CtaTemplate, TargetPosTemplate
 from vnpy_ctastrategy.backtesting import (
     BacktestingEngine,
+    DEFAULT_SLIPPAGE_RATE,
     OptimizationSetting,
     BacktestingMode,
+    SlippageMode,
 )
 from .locale import _
 
@@ -198,6 +200,8 @@ class BacktesterEngine(BaseEngine):
         setting: dict,
         min_commission: float = 0,
         stamp_duty: float = 0,
+        slippage_mode: SlippageMode | str = SlippageMode.RATE,
+        slippage_rate: float = DEFAULT_SLIPPAGE_RATE,
     ) -> None:
         """"""
         self.result_df = None
@@ -224,6 +228,8 @@ class BacktesterEngine(BaseEngine):
             mode=mode,
             min_commission=min_commission,
             stamp_duty=stamp_duty,
+            slippage_mode=slippage_mode,
+            slippage_rate=slippage_rate,
         )
 
         strategy_class: type[CtaTemplate] = self.classes[class_name]
@@ -269,6 +275,8 @@ class BacktesterEngine(BaseEngine):
         setting: dict,
         min_commission: float = 0,
         stamp_duty: float = 0,
+        slippage_mode: SlippageMode | str = SlippageMode.RATE,
+        slippage_rate: float = DEFAULT_SLIPPAGE_RATE,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -291,6 +299,8 @@ class BacktesterEngine(BaseEngine):
                 setting,
                 min_commission,
                 stamp_duty,
+                slippage_mode,
+                slippage_rate,
             ),
         )
         self.thread.start()
@@ -332,6 +342,8 @@ class BacktesterEngine(BaseEngine):
         max_workers: int | None = None,
         min_commission: float = 0,
         stamp_duty: float = 0,
+        slippage_mode: SlippageMode | str = SlippageMode.RATE,
+        slippage_rate: float = DEFAULT_SLIPPAGE_RATE,
     ) -> None:
         """"""
         self.result_values = None
@@ -357,6 +369,8 @@ class BacktesterEngine(BaseEngine):
             mode=mode,
             min_commission=min_commission,
             stamp_duty=stamp_duty,
+            slippage_mode=slippage_mode,
+            slippage_rate=slippage_rate,
         )
 
         strategy_class: type[CtaTemplate] = self.classes[class_name]
@@ -400,6 +414,8 @@ class BacktesterEngine(BaseEngine):
         max_workers: int,
         min_commission: float = 0,
         stamp_duty: float = 0,
+        slippage_mode: SlippageMode | str = SlippageMode.RATE,
+        slippage_rate: float = DEFAULT_SLIPPAGE_RATE,
     ) -> bool:
         if self.thread:
             self.write_log(_("已有任务在运行中，请等待完成"))
@@ -424,6 +440,8 @@ class BacktesterEngine(BaseEngine):
                 max_workers,
                 min_commission,
                 stamp_duty,
+                slippage_mode,
+                slippage_rate,
             ),
         )
         self.thread.start()
