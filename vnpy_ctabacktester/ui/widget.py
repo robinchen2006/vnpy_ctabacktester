@@ -924,6 +924,9 @@ class BacktesterChart(pg.GraphicsLayoutWidget):
 
     def clear_data(self) -> None:
         """"""
+        self.dates.clear()
+        for plot in (self.balance_plot, self.drawdown_plot, self.pnl_plot):
+            plot.getAxis("bottom").set_dates(self.dates)
         self.balance_curve.setData([], [])
         self.drawdown_curve.setData([], [])
         self.profit_pnl_bar.setOpts(x=[], height=[])
@@ -932,7 +935,8 @@ class BacktesterChart(pg.GraphicsLayoutWidget):
 
     def set_data(self, df: DataFrame) -> None:
         """"""
-        if df is None:
+        if df is None or df.empty:
+            self.clear_data()
             return
 
         count: int = len(df)
@@ -940,10 +944,13 @@ class BacktesterChart(pg.GraphicsLayoutWidget):
         self.dates.clear()
         for n, date in enumerate(df.index):
             self.dates[n] = date
+        for plot in (self.balance_plot, self.drawdown_plot, self.pnl_plot):
+            plot.getAxis("bottom").set_dates(self.dates)
 
         # Set data for curve of balance and drawdown
-        self.balance_curve.setData(df["balance"].to_numpy())
-        self.drawdown_curve.setData(df["drawdown"].to_numpy())
+        x = np.arange(count)
+        self.balance_curve.setData(x, df["balance"].to_numpy())
+        self.drawdown_curve.setData(x, df["drawdown"].to_numpy())
 
         # Set data for daily pnl bar
         profit_pnl_x: list = []
@@ -967,6 +974,14 @@ class BacktesterChart(pg.GraphicsLayoutWidget):
         x = x[:-1]
         self.distribution_curve.setData(x, hist)
 
+        # A new replay must not inherit a previous replay's manually zoomed view.
+        for plot in (self.balance_plot, self.drawdown_plot, self.pnl_plot, self.distribution_plot):
+            view = plot.getViewBox()
+            # Flat/single-point series otherwise retain the old zoom's span.
+            view.setRange(xRange=(0, 1), yRange=(0, 1), padding=0)
+            view.enableAutoRange(x=True, y=True)
+            view.updateAutoRange()
+
 
 class DateAxis(pg.AxisItem):
     """Axis for showing date data"""
@@ -974,14 +989,20 @@ class DateAxis(pg.AxisItem):
     def __init__(self, dates: dict, *args: Any, **kwargs: Any) -> None:
         """"""
         super().__init__(*args, **kwargs)
-        self.dates: dict = dates
+        self.dates: dict = dict(dates)
+
+    def set_dates(self, dates: dict) -> None:
+        """Replace the index mapping and invalidate cached rendered tick labels."""
+        self.dates = dict(dates)
+        # Mutating a dict alone does not invalidate AxisItem's QPicture cache.
+        self.setTicks(None)
 
     def tickStrings(self, values: list, scale: float, spacing: float) -> list:
         """"""
         strings: list = []
         for v in values:
             dt = self.dates.get(v, "")
-            strings.append(str(dt))
+            strings.append(dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt))
         return strings
 
 
